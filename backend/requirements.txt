@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+python-multipart
+google-cloud-storage
+google-cloud-pubsub
+pydantic
+chromadb
+sentence-transformers
+google-cloud-aiplatform

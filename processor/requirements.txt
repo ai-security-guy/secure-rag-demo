@@ -1,0 +1,6 @@
+google-cloud-pubsub
+google-cloud-storage
+chromadb
+sentence-transformers
+pypdf
+# docling # Commenting out for now as I need to verify exact package name, using pypdf for "CDR" placeholder

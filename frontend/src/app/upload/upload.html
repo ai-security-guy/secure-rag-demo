@@ -1,0 +1,31 @@
+<div class="upload-container">
+  <mat-card class="upload-card">
+    <mat-card-header>
+      <mat-card-title>Upload Accident Report</mat-card-title>
+      <mat-card-subtitle>Supported formats: PDF</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="file-input-container">
+        <input type="file" (change)="onFileSelected($event)" accept=".pdf" #fileInput hidden>
+        <button mat-stroked-button color="primary" (click)="fileInput.click()">
+          <mat-icon>attach_file</mat-icon>
+          Select File
+        </button>
+        <p *ngIf="selectedFile" class="file-name">{{ selectedFile.name }}</p>
+      </div>
+
+      <mat-progress-bar *ngIf="isUploading" mode="determinate" [value]="uploadProgress"></mat-progress-bar>
+
+      <div *ngIf="uploadResult" class="success-message">
+        <mat-icon class="check-icon">check_circle</mat-icon>
+        <p><strong>{{ uploadResult.filename }}</strong> uploaded successfully!</p>
+        <p class="file-size">{{ (uploadResult.size / 1024).toFixed(2) }} KB</p>
+      </div>
+    </mat-card-content>
+    <mat-card-actions align="end">
+      <button mat-raised-button color="primary" [disabled]="!selectedFile || isUploading" (click)="uploadFile()">
+        Upload
+      </button>
+    </mat-card-actions>
+  </mat-card>
+</div>
