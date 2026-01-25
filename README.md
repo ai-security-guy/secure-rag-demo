@@ -30,7 +30,7 @@ This demo builds a RAG system that ingests PDFs, processes them securely (CDR/Sa
 
 ### 1. Backend
 ```bash
-cd base/backend
+cd secure-rag-app/backend
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -42,7 +42,7 @@ uvicorn main:app --reload --port 8000
 
 ### 2. Processor
 ```bash
-cd base/processor
+cd secure-rag-app/processor
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
