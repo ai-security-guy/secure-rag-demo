@@ -1,6 +1,28 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi import FastAPI, File, UploadFile, HTTPException, Depends
+from auth import verify_token
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+import magic
+
+MAX_FILE_SIZE = 10 * 1024 * 1024 # 10MB
+import re
+
+def validate_input(text):
+    """
+    Basic Input Guardrail.
+    Blocks common prompt injection patterns.
+    """
+    patterns = [
+        r"ignore previous instructions",
+        r"identify yourself",
+        r"system prompt",
+        r"you are a hacked",
+    ]
+    for pattern in patterns:
+        if re.search(pattern, text, re.IGNORECASE):
+            raise HTTPException(status_code=400, detail="Input Content Violation: Potential prompt injection detected.")
+    return True
+
 import shutil
 import os
 
@@ -32,7 +54,7 @@ BUCKET_NAME = "secure-rag-ingest"
 PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT", "secure-rag-demo")
 TOPIC_ID = "secure-rag-upload-topic"
 
-@app.post("/upload")
+@app.post("/upload", dependencies=[Depends(verify_token)])
 async def upload_file(file: UploadFile = File(...)):
     try:
         # 1. Initialize Clients
@@ -50,8 +72,17 @@ async def upload_file(file: UploadFile = File(...)):
                  print(f"Could not create bucket '{BUCKET_NAME}': {create_err}")
                  raise HTTPException(status_code=500, detail=f"Bucket access failed: {create_err}")
 
-        # 3. Upload File
+        # 3. Validate & Upload File
         file_content = await file.read()
+
+        # Size Check
+        if len(file_content) > MAX_FILE_SIZE:
+             raise HTTPException(status_code=413, detail="File too large (max 10MB)")
+
+        # Magic Number Check
+        mime_type = magic.from_buffer(file_content, mime=True)
+        if mime_type != "application/pdf":
+             raise HTTPException(status_code=400, detail=f"Invalid file type: {mime_type}. Only PDF is allowed.")
         
         file_extension = os.path.splitext(file.filename)[1]
         unique_filename = f"{uuid.uuid4()}{file_extension}"
@@ -59,7 +90,7 @@ async def upload_file(file: UploadFile = File(...)):
         
         blob.upload_from_string(
             file_content,
-            content_type=file.content_type
+            content_type=mime_type
         )
         
         gcs_uri = f"gs://{BUCKET_NAME}/{unique_filename}"
@@ -98,6 +129,8 @@ async def upload_file(file: UploadFile = File(...)):
             "size": len(file_content),
             "message": "File uploaded and processed successfully"
         }
+    except HTTPException as he:
+        raise he
     except Exception as e:
         print(f"Upload failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -124,10 +157,11 @@ gen_model = GenerativeModel("gemini-2.0-flash-exp")
 class ChatRequest(BaseModel):
     message: str
 
-@app.post("/chat")
+@app.post("/chat", dependencies=[Depends(verify_token)])
 async def chat(request: ChatRequest):
     try:
         query = request.message
+        validate_input(query)
         print(f"Received query: {query}")
         
         # 1. Embed Query
@@ -162,6 +196,8 @@ Answer:"""
             "response": answer,
             "context": results['documents'][0] # Optional: return context for debugging
         }
+    except HTTPException as he:
+        raise he
     except Exception as e:
         print(f"Chat failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))

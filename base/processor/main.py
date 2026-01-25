@@ -7,6 +7,16 @@ import chromadb
 from sentence_transformers import SentenceTransformer
 from pypdf import PdfReader
 import io
+import re
+
+def sanitize_text(text):
+    """
+    Remove non-printable characters and control codes.
+    This is a basic simulation of CDR's text sanitization phase.
+    """
+    # Remove null bytes and other control characters (except newlines/tabs)
+    sanitized = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', text)
+    return sanitized
 
 # Configuration
 PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT", "secure-rag-demo")
@@ -45,6 +55,11 @@ def process_message(message):
         text = ""
         for page in reader.pages:
             text += page.extract_text() + "\n"
+        
+        # CDR Step: Sanitize
+        original_len = len(text)
+        text = sanitize_text(text)
+        print(f"CDR: Sanitized text. Removed {original_len - len(text)} bytes.")
             
         print(f"Extracted {len(text)} characters.")
         

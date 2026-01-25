@@ -7,3 +7,5 @@ pydantic
 chromadb
 sentence-transformers
 google-cloud-aiplatform
+python-jose[cryptography]
+python-magic
